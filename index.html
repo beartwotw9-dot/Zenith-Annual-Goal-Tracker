@@ -4,6 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     
     <!-- PWA 與 iOS 獨立模式關鍵標籤 -->
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -69,6 +70,7 @@
             return false;
         };
     </script>
-    <script type="module" src="./index.tsx"></script>
+    <script type="text/babel" data-type="module" src="./index.tsx"></script>
+  
 </body>
 </html>
