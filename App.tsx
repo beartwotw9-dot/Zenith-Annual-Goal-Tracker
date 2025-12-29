@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { Target, Plus, Download, Upload, RefreshCw, Share2, Lock, Save, ArrowLeft, Zap } from 'lucide-react';
+import { Target, Plus, Download, Upload, RefreshCw, Share2, Save, Zap, Wand2 } from 'lucide-react';
 import { Goal, GoalCategory, YearStats } from './types';
 import { STORAGE_KEYS } from './constants';
 import { getYearStats, getDaysInMonth, decodeDataFromUrl } from './utils';
@@ -9,6 +9,7 @@ import GoalRow from './components/GoalRow';
 import GoalModal from './components/GoalModal';
 import ShareModal from './components/ShareModal';
 import AICoachPanel from './components/AICoachPanel';
+import PlanGeneratorModal from './components/PlanGeneratorModal';
 
 const TARGET_YEAR = 2026;
 
@@ -18,6 +19,7 @@ const App: React.FC = () => {
   const [selectedMonth, setSelectedMonth] = useState(() => new Date().getMonth());
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [isAiModalOpen, setIsAiModalOpen] = useState(false);
   const [editingGoal, setEditingGoal] = useState<Goal | null>(null);
   const [saveStatus, setSaveStatus] = useState<'saved' | 'saving'>('saved');
   const [isViewMode, setIsViewMode] = useState(false); 
@@ -71,6 +73,24 @@ const App: React.FC = () => {
     setGoals(newGoals);
     localStorage.setItem(yearKey, JSON.stringify(newGoals));
     setTimeout(() => setSaveStatus('saved'), 500);
+  };
+
+  const handleApplyAiPlan = (aiGoals: Partial<Goal>[]) => {
+    const formattedGoals: Goal[] = aiGoals.map(g => ({
+      ...g,
+      id: Math.random().toString(36).substr(2, 9),
+      actual: 0,
+      logs: [],
+      createdAt: Date.now(),
+      description: g.description || ''
+    } as Goal));
+    
+    if (goals.length > 0 && window.confirm('要覆蓋目前的計畫嗎？ (取消則為追加到清單末尾)')) {
+      saveGoals(formattedGoals);
+    } else {
+      saveGoals([...goals, ...formattedGoals]);
+    }
+    setIsAiModalOpen(false);
   };
 
   const handleImportToMine = () => {
@@ -155,7 +175,6 @@ const App: React.FC = () => {
 
   return (
     <div className="h-full flex flex-col font-sans select-none overflow-hidden bg-[#f8fafc]">
-      {/* 唯讀模式 Banner */}
       {isViewMode && (
         <div className="bg-blue-600 text-white px-4 py-2.5 flex items-center justify-between text-[11px] font-black uppercase tracking-wider z-[60] shadow-lg">
           <div className="flex items-center space-x-2">
@@ -191,27 +210,27 @@ const App: React.FC = () => {
         <div className="flex items-center space-x-2">
           {!isViewMode && (
             <button 
-              onClick={() => setIsShareModalOpen(true)} 
-              className="flex items-center space-x-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white px-4 py-2 rounded-xl text-xs font-black shadow-lg shadow-blue-900/40 transition-all active:scale-95"
+              onClick={() => setIsAiModalOpen(true)}
+              className="flex items-center space-x-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white px-4 py-2 rounded-xl text-xs font-black shadow-lg shadow-indigo-900/40 transition-all active:scale-95"
             >
-              <Share2 className="w-4 h-4" />
-              <span className="hidden xs:inline">分享模板</span>
+              <Wand2 className="w-4 h-4" />
+              <span className="hidden xs:inline">AI 規劃</span>
             </button>
           )}
           {!isViewMode && (
-            <>
-              <div className="hidden sm:flex items-center bg-white/5 rounded-lg p-0.5 border border-white/10 mx-2">
-                 <button onClick={handleExport} title="備份資料" className="p-2 hover:bg-white/10 rounded-md transition-colors"><Download className="w-4 h-4 text-slate-300" /></button>
-                 <label title="匯入備份" className="p-2 hover:bg-white/10 rounded-md transition-colors cursor-pointer">
-                    <Upload className="w-4 h-4 text-slate-300" />
-                    <input type="file" className="hidden" onChange={handleImport} accept=".json" />
-                 </label>
-              </div>
-              <button onClick={() => { setEditingGoal(null); setIsModalOpen(true); }} className="bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded-xl text-xs font-black flex items-center space-x-2 transition-all">
-                <Plus className="w-4 h-4" />
-                <span className="hidden xs:inline">新增</span>
-              </button>
-            </>
+            <button 
+              onClick={() => setIsShareModalOpen(true)} 
+              className="flex items-center space-x-2 bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded-xl text-xs font-black transition-all active:scale-95"
+            >
+              <Share2 className="w-4 h-4" />
+              <span className="hidden xs:inline">分享</span>
+            </button>
+          )}
+          {!isViewMode && (
+            <button onClick={() => { setEditingGoal(null); setIsModalOpen(true); }} className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-xl text-xs font-black flex items-center space-x-2 transition-all shadow-lg shadow-blue-900/40">
+              <Plus className="w-4 h-4" />
+              <span className="hidden xs:inline">新增項目</span>
+            </button>
           )}
         </div>
       </header>
@@ -274,7 +293,7 @@ const App: React.FC = () => {
               ))}
               {goals.length === 0 && (
                 <div className="py-20 text-center text-slate-400 font-bold uppercase tracking-widest text-xs">
-                  No goals defined yet. Click share to see templates!
+                  尚無目標。試試點擊「AI 規劃」來生成你的 2026 計畫！
                 </div>
               )}
             </div>
@@ -291,13 +310,14 @@ const App: React.FC = () => {
            ))}
         </div>
         <div className="ml-auto hidden sm:flex items-center space-x-2 px-6 border-l border-gray-100 text-[9px] font-black text-slate-400 uppercase tracking-widest">
-           <span>Zenith OS v1.3</span>
+           <span>Zenith OS v1.4</span>
            <RefreshCw className="w-3 h-3" />
         </div>
       </footer>
 
       <GoalModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSave={handleSaveGoal} editingGoal={editingGoal} />
       <ShareModal isOpen={isShareModalOpen} onClose={() => setIsShareModalOpen(false)} currentGoals={goals} />
+      <PlanGeneratorModal isOpen={isAiModalOpen} onClose={() => setIsAiModalOpen(false)} onApply={handleApplyAiPlan} />
     </div>
   );
 };
